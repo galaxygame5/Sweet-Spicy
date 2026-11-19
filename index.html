@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スイート＆スパイシー Online 🌶️🍋🍰</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        creamBg: '#FFFDF7',
+                        lemonBase: '#FACC15',
+                        pepperBase: '#22C55E',
+                        chiliBase: '#EF4444',
+                        sweetBase: '#EC4899',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- PeerJS for P2P Online -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
+
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background: linear-gradient(135deg, #FFFBEB 0%, #FEF2F2 45%, #F0FDF4 100%);
+            color: #1E293B;
+            user-select: none;
+            touch-action: manipulation;
+            min-height: 100vh;
+        }
+
+        .font-pop {
+            font-family: 'Fredoka', 'Zen Maru Gothic', sans-serif;
+        }
+
+        .bright-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 2px solid #FDE68A;
+            box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.14), 0 4px 10px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .playing-card {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+        }
+        .playing-card:hover {
+            transform: translateY(-4px) scale(1.02);
+        }
+        .playing-card.selected {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 14px 24px -4px rgba(239, 68, 68, 0.35);
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.82); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-pop {
+            animation: popIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes flipReveal {
+            0% { transform: rotateY(90deg) scale(0.9); opacity: 0.4; }
+            100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+        }
+        .animate-flip {
+            animation: flipReveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #FEF3C7; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb { background: #F59E0B; border-radius: 9999px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- HEADER -->
+    <header class="w-full px-4 py-3 bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b-2 border-amber-200 shadow-sm flex justify-between items-center">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="confirmReload()">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-red-500 via-amber-400 to-emerald-400 flex items-center justify-center shadow-md border-2 border-white">
+                <span class="text-2xl">🐱</span>
+            </div>
+            <div>
+                <h1 class="font-black text-lg md:text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600">
+                    スイート＆スパイシー
+                </h1>
+                <p class="text-[10px] md:text-xs text-amber-700/80 font-pop font-bold tracking-wider uppercase">SWEET & SPICY ONLINE</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button onclick="openRuleModal()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 border-2 border-amber-300 px-3 py-1.5 rounded-full text-xs md:text-sm font-black flex items-center gap-1.5 shadow-sm transition transform active:scale-95">
+                <i class="fa-solid fa-book-open text-amber-600"></i>
+                <span>ルール説明</span>
+            </button>
+
+            <div id="headerRoomControls" class="hidden flex items-center space-x-2">
+                <div onclick="copyRoomCode()" class="bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 px-3 py-1.5 rounded-full text-xs md:text-sm font-mono font-black text-rose-700 flex items-center gap-1.5 cursor-pointer transition">
+                    <i class="fa-regular fa-copy"></i>
+                    <span id="displayRoomCode">----</span>
+                </div>
+                <button onclick="toggleSound()" class="w-9 h-9 rounded-full bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 flex items-center justify-center text-amber-800 text-sm transition">
+                    <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="container mx-auto px-3 md:px-4 py-5 max-w-5xl flex-grow flex flex-col justify-center">
+
+        <!-- VIEW 1: TITLE / LOBBY ENTRY -->
+        <div id="viewLobby" class="space-y-5 max-w-2xl mx-auto w-full animate-pop">
+            <div class="text-center space-y-2.5 my-1">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-amber-100 via-rose-100 to-emerald-100 text-rose-700 rounded-full text-xs md:text-sm font-black border-2 border-amber-300 shadow-sm">
+                    <span>🍋 レモン</span>
+                    <span>•</span>
+                    <span>🌿 コショウ</span>
+                    <span>•</span>
+                    <span>🌶️ トウガラシ</span>
+                    <span>•</span>
+                    <span>🍰 スイート</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-black text-slate-800 tracking-tight leading-tight">
+                    嘘とスパイスを見破れ！
+                </h2>
+                <p class="text-slate-600 text-xs md:text-sm max-w-lg mx-auto font-medium leading-relaxed">
+                    数字とスパイスを宣言しながら手札を出し切ろう！<br>
+                    嘘をついてもOK、ただし「チャレンジ！」で見破られると手札が増えるぞ！
+                </p>
+            </div>
+
+            <div class="bright-card rounded-3xl p-5 md:p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-black uppercase tracking-wider text-amber-800 mb-1.5">
+                        <i class="fa-solid fa-cat text-amber-500 mr-1"></i> プレイヤー名（ニックネーム）
+                    </label>
+                    <input type="text" id="playerNameInput" maxlength="10" placeholder="例: ミケネコ"
+                        class="w-full bg-amber-50/70 border-2 border-amber-300 rounded-2xl px-4 py-3 text-slate-800 focus:outline-none focus:border-red-400 focus:bg-white transition font-black text-base md:text-lg placeholder-slate-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-black uppercase tracking-wider text-rose-800 mb-1.5">
+                        <i class="fa-solid fa-key text-rose-500 mr-1"></i> あいことば（部屋コード）
+                    </label>
+                    <input type="text" id="joinRoomCodeInput" placeholder="例: spicy777"
+                        class="w-full bg-rose-50/70 border-2 border-rose-300 rounded-2xl px-4 py-3 text-slate-800 font-mono font-black tracking-widest text-base md:text-lg focus:outline-none focus:border-red-400 focus:bg-white transition placeholder-slate-400">
+                    <p class="text-[11px] text-slate-500 mt-1 font-medium">※一緒に遊ぶメンバー全員で同じ「あいことば」を入力してください（2〜6人対応）</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bright-card rounded-3xl p-5 hover:border-amber-400 transition flex flex-col justify-between space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl border-2 border-amber-300">
+                            <i class="fa-solid fa-crown"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-lg text-slate-800">部屋をつくる</h3>
+                            <p class="text-xs text-slate-500 font-bold">ホストとして新規作成</p>
+                        </div>
+                    </div>
+                    <button id="btnCreateRoom" class="w-full bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-slate-900 font-black text-base md:text-lg py-3.5 rounded-2xl shadow-md border-2 border-amber-500/30 transition transform active:scale-95">
+                        部屋を作成して待機 🏠
+                    </button>
+                </div>
+
+                <div class="bright-card rounded-3xl p-5 hover:border-rose-400 transition flex flex-col justify-between space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl border-2 border-rose-300">
+                            <i class="fa-solid fa-door-open"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-lg text-slate-800">部屋に入る</h3>
+                            <p class="text-xs text-slate-500 font-bold">ゲストとして参加</p>
+                        </div>
+                    </div>
+                    <button id="btnJoinRoom" class="w-full bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-black text-base md:text-lg py-3.5 rounded-2xl shadow-md border-2 border-red-600/30 transition transform active:scale-95">
+                        部屋に参加する 🌶️
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: WAITING ROOM LOBBY -->
+        <div id="viewRoomLobby" class="hidden space-y-5 max-w-2xl mx-auto w-full animate-pop">
+            <div class="bright-card rounded-3xl p-6 md:p-8 space-y-5">
+                <div class="flex flex-wrap justify-between items-center border-b-2 border-amber-200 pb-4 gap-2">
+                    <div>
+                        <span class="text-xs font-black text-amber-600 tracking-wider uppercase">WAITING ROOM</span>
+                        <h2 class="text-2xl md:text-3xl font-black text-slate-800 flex items-center gap-2">
+                            あいことば: <span id="lobbyRoomCode" class="font-mono text-rose-600 bg-rose-50 px-3 py-0.5 rounded-xl border border-rose-200">----</span>
+                        </h2>
+                    </div>
+                    <button onclick="copyRoomCode()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs md:text-sm font-black px-4 py-2 rounded-2xl border-2 border-amber-300 flex items-center gap-1.5 transition">
+                        <i class="fa-regular fa-copy"></i> コピー
+                    </button>
+                </div>
+
+                <div class="bg-gradient-to-r from-amber-50 via-rose-50 to-emerald-50 rounded-2xl p-4 border-2 border-amber-200 text-xs md:text-sm text-slate-700 space-y-1.5">
+                    <div class="font-black text-rose-700 flex items-center gap-1.5">
+                        <span>🏆</span> 勝利条件：トロフィー2枚獲得で即勝利！または終了時の最高得点！
+                    </div>
+                    <div class="font-medium leading-relaxed">
+                        ・手札は<strong>スパイシーカード5枚＋両方なんでもカード1枚（計6枚）</strong>でスタート。<br>
+                        ・前より<strong>大きい数字＆同じスパイス</strong>を宣言してカードを出します（嘘もOK！）。
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center text-xs font-black text-slate-700">
+                        <span>参加メンバー (<span id="playerCount" class="text-rose-600 text-sm">0</span> / 6名)</span>
+                        <span class="text-slate-500">※2名〜6名で遊べます</span>
+                    </div>
+                    <div id="playerList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                </div>
+
+                <div class="pt-2">
+                    <button id="startGameBtn" onclick="startGame()" class="hidden w-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-lg py-4 rounded-2xl shadow-lg transition transform active:scale-95">
+                        ゲームスタート！ 🌶️🍋🌿
+                    </button>
+                    <p id="waitingForHostMsg" class="text-center text-amber-700 font-bold text-xs md:text-sm animate-pulse bg-amber-50 py-3 rounded-2xl border border-amber-200">
+                        ホストがゲームを開始するのを待っています...
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: MAIN GAME TABLE -->
+        <div id="viewGame" class="hidden space-y-3.5 w-full max-w-5xl mx-auto">
+
+            <div class="bright-card p-3.5 md:p-4 rounded-3xl space-y-3">
+                <div class="flex flex-wrap justify-between items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="bg-amber-50 px-3 py-1.5 rounded-2xl border-2 border-amber-300 flex items-center gap-2">
+                            <span class="text-xs font-black text-amber-800">残りトロフィー:</span>
+                            <div id="trophyIconsContainer" class="flex items-center gap-1 text-base">
+                                <span>🏆</span><span>🏆</span><span>🏆</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 px-3 py-1.5 rounded-2xl border-2 border-slate-200 flex items-center gap-2 text-xs font-black text-slate-700">
+                            <span>📚 山札: <span id="deckCountText" class="text-rose-600 font-pop text-sm">--</span>枚</span>
+                            <span class="text-slate-300">|</span>
+                            <span>🍰 余りスイート: <span id="sweetStockText" class="text-pink-600 font-pop text-sm">--</span>枚</span>
+                        </div>
+                    </div>
+
+                    <div id="turnStatusBadge" class="px-4 py-1.5 rounded-2xl text-xs md:text-sm font-black border-2">
+                        ---
+                    </div>
+                </div>
+
+                <div id="gamePlayersStrip" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2"></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+
+                <div class="lg:col-span-5 bright-card p-4 rounded-3xl flex flex-col items-center justify-between space-y-3 relative overflow-hidden">
+                    <div class="w-full flex justify-between items-center">
+                        <span class="text-xs font-black text-slate-500 uppercase tracking-wider">場のカード（現在の山）</span>
+                        <span id="fieldStackCountBadge" class="px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full text-xs font-black border border-amber-300">
+                            0枚積み上がり
+                        </span>
+                    </div>
+
+                    <div id="fieldCardVisual" class="w-40 h-52 sm:w-44 sm:h-56 rounded-3xl border-4 border-dashed border-amber-300 bg-amber-50/50 flex flex-col items-center justify-center p-4 text-center shadow-inner relative">
+                        <span class="text-4xl mb-2">🍽️</span>
+                        <span class="text-sm font-black text-amber-800">場にカードなし</span>
+                        <span class="text-[11px] font-bold text-amber-600 mt-1">好きなスパイスで<br>「1・2・3」を出せます</span>
+                    </div>
+
+                    <div id="nextRequiredRuleBanner" class="w-full bg-slate-800 text-white rounded-2xl px-3.5 py-2 text-center text-xs font-bold shadow">
+                        次の宣言条件：好きなスパイス の 1〜3
+                    </div>
+                </div>
+
+                <div class="lg:col-span-7 bright-card p-4 md:p-5 rounded-3xl flex flex-col justify-between space-y-3">
+
+                    <div id="panelChallengeWindow" class="hidden space-y-4 my-auto animate-pop">
+                        <div class="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 text-center space-y-1.5">
+                            <span id="challengeWindowBadge" class="inline-block px-3 py-0.5 bg-rose-600 text-white text-xs font-black rounded-full">
+                                宣言チェック！
+                            </span>
+                            <h3 id="challengeAnnouncementText" class="text-lg md:text-xl font-black text-slate-800">
+                                ---
+                            </h3>
+                            <p id="challengeSubText" class="text-xs font-bold text-rose-700">
+                                嘘だと思うなら「数字」か「スパイス」を指定してチャレンジ！
+                            </p>
+                        </div>
+
+                        <div id="challengerButtonsBox" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <button onclick="sendChallenge('NUMBER')" class="bg-gradient-to-b from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black py-3.5 px-3 rounded-2xl shadow-md border-2 border-amber-600/30 flex flex-col items-center justify-center gap-1 transition transform active:scale-95">
+                                <span class="text-xl">🔢</span>
+                                <span class="text-xs md:text-sm">数字が嘘だ！</span>
+                            </button>
+                            <button onclick="sendChallenge('SPICE')" class="bg-gradient-to-b from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-black py-3.5 px-3 rounded-2xl shadow-md border-2 border-red-700/30 flex flex-col items-center justify-center gap-1 transition transform active:scale-95">
+                                <span class="text-xl">🌶️</span>
+                                <span class="text-xs md:text-sm">スパイスが嘘だ！</span>
+                            </button>
+                            <button id="btnPassChallenge" onclick="sendPassChallenge()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-3.5 px-3 rounded-2xl border-2 border-slate-300 flex flex-col items-center justify-center gap-1 transition transform active:scale-95">
+                                <span class="text-xl">👌</span>
+                                <span id="passChallengeBtnLabel" class="text-xs md:text-sm">信じる（OK）</span>
+                            </button>
+                        </div>
+
+                        <div id="challengerWaitingBox" class="hidden text-center py-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs font-bold text-amber-800">
+                            他のプレイヤーの判断を待っています...
+                        </div>
+                    </div>
+
+                    <div id="panelRevealResult" class="hidden space-y-3 my-auto animate-pop text-center">
+                        <div id="revealResultBanner" class="p-4 rounded-2xl border-2 space-y-2">
+                            <div id="revealResultTitle" class="text-xl md:text-2xl font-black">---</div>
+                            <div id="revealActualCardBox" class="flex justify-center py-1"></div>
+                            <p id="revealResultDesc" class="text-xs md:text-sm font-bold">---</p>
+                        </div>
+                        <button id="btnContinueAfterReveal" onclick="acknowledgeReveal()" class="hidden w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-3 rounded-2xl shadow transition">
+                            次の手番へ進む ➡️
+                        </button>
+                        <p id="waitHostRevealText" class="hidden text-xs font-bold text-slate-500 animate-pulse">
+                            まもなく次の手番に移ります...
+                        </p>
+                    </div>
+
+                    <div id="panelTurnAction" class="space-y-3 my-auto">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-black text-slate-700 uppercase">アクション選択</span>
+                            <button id="btnPassDraw" onclick="playPassDraw()" class="bg-sky-100 hover:bg-sky-200 disabled:opacity-40 disabled:pointer-events-none text-sky-900 border-2 border-sky-300 px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition transform active:scale-95">
+                                <i class="fa-solid fa-layer-group"></i> パスして1枚引く
+                            </button>
+                        </div>
+
+                        <div class="bg-amber-50/70 p-3 rounded-2xl border border-amber-200 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-black text-amber-900">① 宣言するスパイス</span>
+                                <span id="spiceLockHint" class="text-[11px] font-bold text-rose-600"></span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="selectDeclareSpice('LEMON')" id="btnSpiceLEMON" class="py-2.5 rounded-xl font-black text-xs md:text-sm border-2 transition flex items-center justify-center gap-1.5 bg-yellow-100 border-yellow-400 text-yellow-900">
+                                    <span>🍋</span> レモン
+                                </button>
+                                <button type="button" onclick="selectDeclareSpice('PEPPER')" id="btnSpicePEPPER" class="py-2.5 rounded-xl font-black text-xs md:text-sm border-2 transition flex items-center justify-center gap-1.5 bg-emerald-100 border-emerald-400 text-emerald-900">
+                                    <span>🌿</span> コショウ
+                                </button>
+                                <button type="button" onclick="selectDeclareSpice('CHILI')" id="btnSpiceCHILI" class="py-2.5 rounded-xl font-black text-xs md:text-sm border-2 transition flex items-center justify-center gap-1.5 bg-red-100 border-red-400 text-red-900">
+                                    <span>🌶️</span> トウガラシ
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-rose-50/70 p-3 rounded-2xl border border-rose-200 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-black text-rose-900">② 宣言する数字</span>
+                                <span id="numberRangeHint" class="text-[11px] font-bold text-rose-600">1〜3を選択可能</span>
+                            </div>
+                            <div id="declareNumbersGrid" class="grid grid-cols-5 sm:grid-cols-10 gap-1.5"></div>
+                        </div>
+
+                        <button id="btnPlaySelectedCard" onclick="submitPlayCard()" disabled
+                            class="w-full bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500 hover:opacity-95 disabled:opacity-40 disabled:pointer-events-none text-white font-black text-base py-3.5 rounded-2xl shadow-lg transition transform active:scale-95">
+                            手札と宣言を選んでカードを出す！
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bright-card p-4 rounded-3xl space-y-2.5">
+                <div class="flex flex-wrap justify-between items-center gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs md:text-sm font-black text-slate-800">🐾 あなたの手札 (<span id="myHandCount" class="text-rose-600">0</span>枚)</span>
+                        <span id="myTrophyBadge" class="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-black border border-amber-300">
+                            🏆 0枚 / 獲得札 0枚
+                        </span>
+                    </div>
+                    <!-- Auto-Sort Buttons -->
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="sortHandByNumber()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1 transition shadow-sm">
+                            <i class="fa-solid fa-arrow-down-1-9"></i> 数字順ソート
+                        </button>
+                        <button onclick="sortHandBySpice()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1 transition shadow-sm">
+                            <i class="fa-solid fa-palette"></i> スパイス順ソート
+                        </button>
+                    </div>
+                </div>
+
+                <div id="myHandContainer" class="flex items-center gap-3 overflow-x-auto py-3 px-1 min-h-[160px]"></div>
+            </div>
+
+            <div class="bright-card p-3.5 rounded-3xl space-y-1.5">
+                <div class="text-xs font-black text-slate-600 flex items-center gap-1.5 border-b border-slate-200 pb-1">
+                    <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> プレイログ
+                </div>
+                <div id="gameLogList" class="max-h-24 overflow-y-auto space-y-1 text-xs font-medium text-slate-700 pr-1"></div>
+            </div>
+        </div>
+
+        <div id="viewGameOver" class="hidden bright-card rounded-3xl p-6 md:p-10 text-center space-y-6 max-w-2xl mx-auto w-full animate-pop">
+            <div class="space-y-2">
+                <div class="text-6xl mb-1">👑🐱🏆</div>
+                <span id="gameOverReasonBadge" class="inline-block px-4 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-black border border-amber-300">
+                    ゲーム終了！
+                </span>
+                <h2 id="finalWinnerTitle" class="text-3xl md:text-4xl font-black text-slate-800">優勝者決定！</h2>
+                <p id="finalWinnerSubtitle" class="text-xs md:text-sm font-bold text-slate-600">最終得点計算の結果発表</p>
+            </div>
+
+            <div id="finalRankingList" class="space-y-2.5 text-left"></div>
+
+            <div id="gameOverHostControls" class="hidden pt-2">
+                <button onclick="returnToLobby()" class="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:opacity-95 text-white font-black text-lg py-4 rounded-2xl shadow-lg transition transform active:scale-95">
+                    ロビーに戻ってもう一度遊ぶ 🔄
+                </button>
+            </div>
+            <p id="gameOverClientMsg" class="hidden text-xs font-bold text-amber-700 animate-pulse">
+                ホストがロビーに戻すのを待っています...
+            </p>
+        </div>
+
+    </main>
+
+    <div id="ruleModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white border-4 border-amber-300 rounded-3xl max-w-3xl w-full max-h-[88vh] flex flex-col shadow-2xl animate-pop overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-amber-100 via-rose-100 to-emerald-100 border-b-2 border-amber-200 flex justify-between items-center">
+                <h2 class="text-lg md:text-xl font-black text-slate-800 flex items-center gap-2">
+                    <span>📖</span> スイート＆スパイシー 完全ルールガイド
+                </h2>
+                <button onclick="closeRuleModal()" class="w-9 h-9 rounded-full bg-white hover:bg-rose-100 text-slate-700 font-black border border-slate-300 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 md:p-6 overflow-y-auto space-y-5 text-xs md:text-sm text-slate-700 leading-relaxed">
+                <section class="space-y-1.5">
+                    <h3 class="font-black text-base text-rose-600 border-b border-rose-200 pb-1">1. ゲームの目的と勝利条件</h3>
+                    <p>手札のカードを裏向きに出しながら<strong>「スパイス」と「数字」を宣言</strong>し、誰よりも早く手札を出し切るブラフ（嘘つき）カードゲームです。</p>
+                    <ul class="list-disc pl-5 space-y-1 font-bold text-slate-800">
+                        <li>手札をすべて出し切ると<strong>トロフィーカード（1枚10点）</strong>を獲得！</li>
+                        <li><strong>誰か1人がトロフィーを2枚獲得した瞬間、その人の即座に完全勝利！</strong></li>
+                        <li>トロフィー3枚がすべて取られるか、山札から「ゲーム終了カード」が出たら得点計算で勝者を決めます。</li>
+                    </ul>
+                </section>
+
+                <section class="space-y-1.5">
+                    <h3 class="font-black text-base text-amber-600 border-b border-amber-200 pb-1">2. カードの種類（全110枚構成）</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div class="bg-amber-50 p-3 rounded-2xl border border-amber-200">
+                            <div class="font-black text-slate-800">🍋🌿🌶️ 通常スパイシーカード（90枚）</div>
+                            <p class="text-xs mt-0.5">レモン・コショウ・トウガラシの3種。各スパイスに1〜10の数字が3枚ずつあります。</p>
+                        </div>
+                        <div class="bg-pink-50 p-3 rounded-2xl border border-pink-200">
+                            <div class="font-black text-pink-700">🍰 両方なんでもカード（6枚）</div>
+                            <p class="text-xs mt-0.5">開始時に全員1枚ずつ所持。どの数字・どのスパイスとしても本当扱いになる最強の切り札です。</p>
+                        </div>
+                        <div class="bg-sky-50 p-3 rounded-2xl border border-sky-200">
+                            <div class="font-black text-sky-700">🔢 数字なんでもカード（5枚）</div>
+                            <p class="text-xs mt-0.5">どの数字としても本当扱いになりますが、<strong>スパイスとしては常に嘘</strong>になります。</p>
+                        </div>
+                        <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200">
+                            <div class="font-black text-emerald-700">🌈 スパイスなんでもカード（5枚）</div>
+                            <p class="text-xs mt-0.5">どのスパイスとしても本当扱いになりますが、<strong>数字としては常に嘘</strong>になります。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="space-y-1.5">
+                    <h3 class="font-black text-base text-emerald-600 border-b border-emerald-200 pb-1">3. 手番の進め方と宣言のルール</h3>
+                    <p>手番では<strong>「カードを1枚裏向きで出す」</strong>か<strong>「パスして山札から1枚引く」</strong>のどちらかを行います。カードを出す際は嘘の宣言をしても構いません。</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>場にカードがない時（1枚目）</strong>：好きなスパイスを宣言し、数字は<strong>「1・2・3」</strong>のいずれかを宣言します。</li>
+                        <li><strong>場にカードがある時（2枚目以降）</strong>：場と<strong>同じスパイス</strong>を宣言し、直前の数字より<strong>大きい数字（最大10）</strong>を宣言します。</li>
+                        <li><strong>直前の数字が「10」だった時</strong>：スパイスはそのままで、数字をリセットして<strong>「1・2・3」</strong>のいずれかを宣言します。</li>
+                    </ul>
+                </section>
+
+                <section class="space-y-1.5">
+                    <h3 class="font-black text-base text-purple-600 border-b border-purple-200 pb-1">4. チャレンジ（ダウト）のルール</h3>
+                    <p>誰かがカードを出した直後、他のプレイヤーは<strong>「数字が嘘だ！」「スパイスが嘘だ！」のどちらか一方だけ</strong>を指定してチャレンジできます。</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>指定された要素が嘘だった場合</strong>：チャレンジした側の勝ち！</li>
+                        <li><strong>指定された要素が本当だった場合</strong>：カードを出した側の勝ち！（別の要素が嘘でも指定外ならセーフ）</li>
+                        <li><strong>勝者の報酬</strong>：場に積まれたカードをすべて裏向きのまま得点札（1枚1点）として獲得！</li>
+                        <li><strong>敗者のペナルティ</strong>：山札からカードを<strong>2枚引き</strong>、敗者の手番からゲームを再開します（この時、手札に両方なんでもカードが無い場合は余りから1枚補充できます）。</li>
+                    </ul>
+                </section>
+
+                <section class="space-y-1.5">
+                    <h3 class="font-black text-base text-slate-800 border-b border-slate-200 pb-1">5. 得点計算表（2枚取り即勝利以外の場合）</h3>
+                    <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200 grid grid-cols-2 gap-2 text-xs font-bold">
+                        <div class="text-emerald-700">🏆 トロフィーカード：＋10点 / 枚</div>
+                        <div class="text-emerald-700">🍰 獲得した両方なんでも：＋5点 / 枚</div>
+                        <div class="text-emerald-700">🃏 獲得したその他カード：＋1点 / 枚</div>
+                        <div class="text-rose-600">💀 手札残りの両方なんでも：−5点 / 枚</div>
+                        <div class="text-rose-600 col-span-2">💀 手札残りのその他カード：−1点 / 枚</div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 text-center">
+                <button onclick="closeRuleModal()" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-black px-8 py-2.5 rounded-2xl shadow transition">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastPopup" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border-2 border-amber-400 flex items-center gap-2.5 animate-pop pointer-events-none">
+        <span id="toastIcon" class="text-xl">🌶️</span>
+        <span id="toastText" class="text-xs md:text-sm font-black">通知</span>
+    </div>
+
+    <footer class="p-3 text-center text-[11px] font-bold text-slate-400">
+        &copy; スイート＆スパイシー Online — 2〜6人用ブラフカードゲーム
+    </footer>
+
+    <script>
+        const APP_PREFIX = "sweet-spicy-online-v3-";
+
+        const SPICE_META = {
+            LEMON:  { name: 'レモン',     icon: '🍋', bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-900', pill: 'bg-yellow-400 text-slate-950', order: 1 },
+            PEPPER: { name: 'コショウ',   icon: '🌿', bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-900', pill: 'bg-emerald-500 text-white', order: 2 },
+            CHILI:  { name: 'トウガラシ', icon: '🌶️', bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-900', pill: 'bg-red-500 text-white', order: 3 }
+        };
+
+        const PLAYER_AVATARS = ['🐱', '🐈‍⬛', '🦁', '🐯', '🦊', '🐼'];
+
+        const END_CARD_FROM_BOTTOM = {
+            2: 50,
+            3: 42,
+            4: 34,
+            5: 26,
+            6: 18
+        };
+
+        let peer = null;
+        let myId = "";
+        let myName = "";
+        let roomCode = "";
+        let isHost = false;
+        let connections = {};
+        let hostConn = null;
+        let soundEnabled = true;
+
+        let localUI = {
+            selectedCardIndex: null,
+            declareSpice: 'LEMON',
+            declareNumber: null,
+            hasPassedChallenge: false
+        };
+
+        let gameState = {
+            hostId: "",
+            status: 'LOBBY',
+            players: {},
+            playerOrder: [],
+            turnIndex: 0,
+            deck: [],
+            sweetStock: 0,
+            trophiesLeft: 3,
+            fieldCards: [],
+            lastPlay: null,
+            challengePasses: [],
+            revealInfo: null,
+            gameOverReason: "",
+            finalRankings: [],
+            logs: []
+        };
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new AudioContextClass();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'tap') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + 0.06);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                } else if (type === 'card') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(340, now);
+                    osc.frequency.exponentialRampToValueAtTime(580, now + 0.12);
+                    gain.gain.setValueAtTime(0.11, now);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'challenge') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(660, now + 0.09);
+                    gain.gain.setValueAtTime(0.13, now);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'win') {
+                    [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.type = 'sine';
+                        o.frequency.setValueAtTime(f, now + idx * 0.1);
+                        g.gain.setValueAtTime(0.11, now + idx * 0.1);
+                        g.gain.exponentialRampToValueAtTime(0.005, now + idx * 0.1 + 0.28);
+                        o.start(now + idx * 0.1);
+                        o.stop(now + idx * 0.1 + 0.28);
+                    });
+                }
+            } catch (e) {}
+        }
+
+        function showToast(icon, text) {
+            const box = document.getElementById('toastPopup');
+            document.getElementById('toastIcon').innerText = icon;
+            document.getElementById('toastText').innerText = text;
+            box.classList.remove('hidden');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => box.classList.add('hidden'), 2200);
+        }
+
+        window.openRuleModal = () => { playSound('tap'); document.getElementById('ruleModal').classList.remove('hidden'); };
+        window.closeRuleModal = () => { playSound('tap'); document.getElementById('ruleModal').classList.add('hidden'); };
+
+        function showView(viewId) {
+            ['viewLobby', 'viewRoomLobby', 'viewGame', 'viewGameOver'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+
+            const headerCtrls = document.getElementById('headerRoomControls');
+            if (viewId === 'viewLobby') headerCtrls.classList.add('hidden');
+            else headerCtrls.classList.remove('hidden');
+        }
+
+        function getSanitizedName() {
+            const raw = document.getElementById('playerNameInput').value.trim();
+            return raw || 'ネコ' + Math.floor(Math.random() * 90 + 10);
+        }
+
+        function handleCreateRoom() {
+            playSound('tap');
+            myName = getSanitizedName();
+            roomCode = document.getElementById('joinRoomCodeInput').value.trim().toLowerCase();
+            if (!roomCode) { alert("あいことばを入力してください！"); return; }
+
+            isHost = true;
+            peer = new Peer(`${APP_PREFIX}${roomCode}-host`);
+
+            peer.on('open', (id) => {
+                myId = id;
+                gameState.hostId = myId;
+                gameState.status = 'LOBBY';
+                gameState.players = { [myId]: createPlayerObject(myId, myName, true, 0) };
+                enterLobbyView();
+                broadcastState();
+            });
+
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') alert("そのあいことばは既に使われています。");
+                else alert("接続エラー: " + err.type);
+            });
+
+            peer.on('connection', (conn) => {
+                conn.on('open', () => {
+                    conn.on('data', (msg) => handleHostReceive(conn, msg));
+                });
+                conn.on('close', () => {
+                    if (gameState.status === 'LOBBY') {
+                        delete connections[conn.peer];
+                        delete gameState.players[conn.peer];
+                        broadcastState();
+                    }
+                });
+            });
+        }
+
+        function handleJoinRoom() {
+            playSound('tap');
+            myName = getSanitizedName();
+            roomCode = document.getElementById('joinRoomCodeInput').value.trim().toLowerCase();
+            if (!roomCode) { alert("あいことばを入力してください！"); return; }
+
+            isHost = false;
+            peer = new Peer();
+
+            peer.on('open', (id) => {
+                myId = id;
+                hostConn = peer.connect(`${APP_PREFIX}${roomCode}-host`);
+                hostConn.on('open', () => {
+                    hostConn.send({ type: 'JOIN', id: myId, name: myName });
+                    enterLobbyView();
+                });
+                hostConn.on('data', (msg) => handleGuestReceive(msg));
+            });
+
+            peer.on('error', () => { alert("部屋が見つかりませんでした。"); });
+        }
+
+        function createPlayerObject(id, name, isHostFlag, index) {
+            return {
+                id, name,
+                isHost: isHostFlag,
+                avatar: PLAYER_AVATARS[index % PLAYER_AVATARS.length],
+                hand: [],
+                wonCards: [],
+                trophies: 0
+            };
+        }
+
+        function enterLobbyView() {
+            document.getElementById('displayRoomCode').innerText = roomCode;
+            document.getElementById('lobbyRoomCode').innerText = roomCode;
+            showView('viewRoomLobby');
+        }
+
+        function broadcastState() {
+            if (!isHost) return;
+            Object.values(connections).forEach(conn => {
+                if (conn.open) conn.send({ type: 'STATE', gameState });
+            });
+            renderAll();
+        }
+
+        function handleHostReceive(conn, msg) {
+            if (msg.type === 'JOIN') {
+                if (gameState.status !== 'LOBBY') {
+                    conn.send({ type: 'ERROR', text: 'すでにゲームが進行中です！' });
+                    return;
+                }
+                const count = Object.keys(gameState.players).length;
+                if (count >= 6) { conn.send({ type: 'ERROR', text: '満員です！' }); return; }
+                connections[conn.peer] = conn;
+                gameState.players[msg.id] = createPlayerObject(msg.id, msg.name, false, count);
+                broadcastState();
+            } else if (msg.type === 'PLAY_CARD') {
+                processPlayCard(msg.playerId, msg.cardIndex, msg.declaredSpice, msg.declaredNumber);
+            } else if (msg.type === 'PASS_DRAW') {
+                processPassDraw(msg.playerId);
+            } else if (msg.type === 'CHALLENGE') {
+                processChallenge(msg.playerId, msg.challengeType);
+            } else if (msg.type === 'PASS_CHALLENGE') {
+                processPassChallenge(msg.playerId);
+            } else if (msg.type === 'ACK_REVEAL') {
+                processAcknowledgeReveal();
+            } else if (msg.type === 'RETURN_LOBBY') {
+                processReturnLobby();
+            }
+        }
+
+        function handleGuestReceive(msg) {
+            if (msg.type === 'STATE') {
+                const prevStatus = gameState.status;
+                gameState = msg.gameState;
+                if (prevStatus !== gameState.status) {
+                    localUI.selectedCardIndex = null;
+                    localUI.hasPassedChallenge = false;
+                    if (gameState.status === 'CHALLENGE_WINDOW') playSound('card');
+                    else if (gameState.status === 'REVEAL_CHALLENGE') playSound('challenge');
+                    else if (gameState.status === 'GAMEOVER') playSound('win');
+                }
+                renderAll();
+            } else if (msg.type === 'ERROR') {
+                alert(msg.text);
+            }
+        }
+
+        function buildSpicyDeck(playerCount) {
+            const cards = [];
+            const spices = ['LEMON', 'PEPPER', 'CHILI'];
+            spices.forEach(sp => {
+                for (let num = 1; num <= 10; num++) {
+                    for (let copy = 0; copy < 3; copy++) {
+                        cards.push({ kind: 'SPICY', spice: sp, number: num });
+                    }
+                }
+            });
+            for (let i = 0; i < 5; i++) cards.push({ kind: 'WILD_NUMBER', spice: null, number: 99 });
+            for (let i = 0; i < 5; i++) cards.push({ kind: 'WILD_SPICE', spice: 'ANY', number: 99 });
+            shuffleArray(cards);
+            return cards;
+        }
+
+        function insertGameEndCard(deck, playerCount) {
+            const fromBottom = END_CARD_FROM_BOTTOM[playerCount] || 34;
+            const insertIdx = Math.max(1, deck.length - fromBottom);
+            deck.splice(insertIdx, 0, { kind: 'END_GAME' });
+        }
+
+        function shuffleArray(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+
+        window.startGame = function() {
+            if (!isHost) return;
+            const pIds = Object.keys(gameState.players);
+            if (pIds.length < 2) { alert("2名以上で開始できます！"); return; }
+
+            playSound('win');
+            shuffleArray(pIds);
+            gameState.playerOrder = pIds;
+            gameState.turnIndex = 0;
+            gameState.trophiesLeft = 3;
+            gameState.fieldCards = [];
+            gameState.lastPlay = null;
+            gameState.challengePasses = [];
+            gameState.revealInfo = null;
+            gameState.logs = [];
+
+            const deck = buildSpicyDeck(pIds.length);
+            pIds.forEach((id, idx) => {
+                const p = gameState.players[id];
+                p.avatar = PLAYER_AVATARS[idx % PLAYER_AVATARS.length];
+                p.wonCards = [];
+                p.trophies = 0;
+                p.hand = [];
+                for (let c = 0; c < 5; c++) p.hand.push(deck.pop());
+                p.hand.push({ kind: 'SWEET', spice: 'ANY', number: 100 });
+            });
+
+            gameState.sweetStock = Math.max(0, 6 - pIds.length);
+            insertGameEndCard(deck, pIds.length);
+            gameState.deck = deck;
+            gameState.status = 'PLAYING';
+
+            const starter = gameState.players[pIds[0]];
+            addLog(`🎉 ゲーム開始！最初のプレイヤーは ${starter.name} です！`);
+            broadcastState();
+        };
+
+        function drawCardsForPlayer(playerId, count) {
+            const p = gameState.players[playerId];
+            if (!p) return false;
+
+            for (let i = 0; i < count; i++) {
+                if (gameState.deck.length === 0) {
+                    triggerGameOver('山札がすべてなくなりました！');
+                    return true;
+                }
+                const topCard = gameState.deck.pop();
+                if (topCard.kind === 'END_GAME') {
+                    addLog(`⏰ 山札から「ゲーム終了カード」が出現しました！`);
+                    triggerGameOver('山札から「ゲーム終了カード」が現れました！');
+                    return true;
+                }
+                p.hand.push(topCard);
+            }
+            return false;
+        }
+
+        function getValidDeclarationConstraints() {
+            if (!gameState.lastPlay) {
+                return { lockedSpice: null, allowedNumbers: [1, 2, 3] };
+            }
+            const prevNum = gameState.lastPlay.declaredNumber;
+            const prevSpice = gameState.lastPlay.declaredSpice;
+            if (prevNum >= 10) {
+                return { lockedSpice: prevSpice, allowedNumbers: [1, 2, 3] };
+            }
+            const nums = [];
+            for (let n = prevNum + 1; n <= 10; n++) nums.push(n);
+            return { lockedSpice: prevSpice, allowedNumbers: nums };
+        }
+
+        function processPassDraw(playerId) {
+            if (gameState.status !== 'PLAYING') return;
+            if (gameState.playerOrder[gameState.turnIndex] !== playerId) return;
+
+            const p = gameState.players[playerId];
+            addLog(`🃏 ${p.name} はパスして山札から1枚引きました。`);
+
+            const ended = drawCardsForPlayer(playerId, 1);
+            if (ended) { broadcastState(); return; }
+
+            gameState.turnIndex = (gameState.turnIndex + 1) % gameState.playerOrder.length;
+            broadcastState();
+        }
+
+        function processPlayCard(playerId, cardIndex, declaredSpice, declaredNumber) {
+            if (gameState.status !== 'PLAYING') return;
+            if (gameState.playerOrder[gameState.turnIndex] !== playerId) return;
+
+            const p = gameState.players[playerId];
+            if (cardIndex < 0 || cardIndex >= p.hand.length) return;
+
+            const { lockedSpice, allowedNumbers } = getValidDeclarationConstraints();
+            if (lockedSpice && declaredSpice !== lockedSpice) return;
+            if (!allowedNumbers.includes(declaredNumber)) return;
+
+            const playedCard = p.hand.splice(cardIndex, 1)[0];
+            gameState.fieldCards.push(playedCard);
+
+            const isLastCard = p.hand.length === 0;
+            gameState.lastPlay = {
+                playerId,
+                playerName: p.name,
+                card: playedCard,
+                declaredSpice,
+                declaredNumber,
+                isLastCardPlay: isLastCard
+            };
+            gameState.challengePasses = [];
+            gameState.status = 'CHALLENGE_WINDOW';
+
+            const spMeta = SPICE_META[declaredSpice];
+            const lastTag = isLastCard ? '【ラスト1枚・上がり宣言！】' : '';
+            addLog(`🗣️ ${p.name}：「${spMeta.name}の ${declaredNumber}！」${lastTag}`);
+
+            broadcastState();
+        }
+
+        function processPassChallenge(playerId) {
+            if (gameState.status !== 'CHALLENGE_WINDOW') return;
+            if (!gameState.lastPlay || gameState.lastPlay.playerId === playerId) return;
+
+            if (!gameState.challengePasses.includes(playerId)) {
+                gameState.challengePasses.push(playerId);
+            }
+
+            const nonActiveCount = gameState.playerOrder.length - 1;
+            if (gameState.challengePasses.length >= nonActiveCount) {
+                const actorId = gameState.lastPlay.playerId;
+
+                if (gameState.lastPlay.isLastCardPlay) {
+                    handleTrophyAward(actorId);
+                    return;
+                }
+
+                const actorSeat = gameState.playerOrder.indexOf(actorId);
+                gameState.turnIndex = (actorSeat + 1) % gameState.playerOrder.length;
+                gameState.status = 'PLAYING';
+                gameState.challengePasses = [];
+                broadcastState();
+            } else {
+                broadcastState();
+            }
+        }
+
+        function evaluateChallengeTruth(card, declaredSpice, declaredNumber, challengeType) {
+            if (card.kind === 'SWEET') return false;
+            if (challengeType === 'NUMBER') {
+                if (card.kind === 'WILD_NUMBER') return false;
+                if (card.kind === 'WILD_SPICE') return true;
+                return card.number !== declaredNumber;
+            } else {
+                if (card.kind === 'WILD_SPICE') return false;
+                if (card.kind === 'WILD_NUMBER') return true;
+                return card.spice !== declaredSpice;
+            }
+        }
+
+        function processChallenge(challengerId, challengeType) {
+            if (gameState.status !== 'CHALLENGE_WINDOW') return;
+            if (!gameState.lastPlay || gameState.lastPlay.playerId === challengerId) return;
+
+            const play = gameState.lastPlay;
+            const challenger = gameState.players[challengerId];
+            const isLie = evaluateChallengeTruth(play.card, play.declaredSpice, play.declaredNumber, challengeType);
+
+            const winnerId = isLie ? challengerId : play.playerId;
+            const loserId = isLie ? play.playerId : challengerId;
+            const winner = gameState.players[winnerId];
+            const loser = gameState.players[loserId];
+
+            const typeLabel = challengeType === 'NUMBER' ? '数字' : 'スパイス';
+            addLog(`⚡ ${challenger.name} が「${typeLabel}」にチャレンジ！ → 結果は【${isLie ? '嘘だった！' : '本当だった！'}】`);
+
+            const stackCount = gameState.fieldCards.length;
+
+            if (play.isLastCardPlay && !isLie) {
+                gameState.revealInfo = {
+                    challengerId, challengerName: challenger.name, challengeType,
+                    isLie: false, winnerId: play.playerId, loserId: challengerId,
+                    card: play.card, fieldCount: stackCount, isLastCardSuccess: true
+                };
+                gameState.status = 'REVEAL_CHALLENGE';
+                broadcastState();
+                return;
+            }
+
+            winner.wonCards.push(...gameState.fieldCards);
+            gameState.fieldCards = [];
+            gameState.lastPlay = null;
+
+            const ended = drawCardsForPlayer(loserId, 2);
+            if (ended) { broadcastState(); return; }
+
+            const hasSweet = loser.hand.some(c => c.kind === 'SWEET');
+            if (!hasSweet && gameState.sweetStock > 0) {
+                gameState.sweetStock--;
+                loser.hand.push({ kind: 'SWEET', spice: 'ANY', number: 100 });
+            }
+
+            gameState.turnIndex = gameState.playerOrder.indexOf(loserId);
+
+            gameState.revealInfo = {
+                challengerId, challengerName: challenger.name, challengeType,
+                isLie, winnerId, loserId, card: play.card, fieldCount: stackCount,
+                isLastCardSuccess: false
+            };
+            gameState.status = 'REVEAL_CHALLENGE';
+            broadcastState();
+        }
+
+        function handleTrophyAward(playerId) {
+            const p = gameState.players[playerId];
+            gameState.fieldCards = [];
+            gameState.lastPlay = null;
+            gameState.trophiesLeft = Math.max(0, gameState.trophiesLeft - 1);
+            p.trophies += 1;
+
+            addLog(`🏆 ${p.name} が手札を出し切り、トロフィーを獲得！（現在 ${p.trophies}枚）`);
+
+            if (p.trophies >= 2) {
+                triggerGameOver(`${p.name} がトロフィーを2枚獲得しました！`, p.id);
+                return;
+            }
+            if (gameState.trophiesLeft <= 0) {
+                triggerGameOver('3枚のトロフィーすべてが獲得されました！');
+                return;
+            }
+
+            const ended = drawCardsForPlayer(playerId, 5);
+            if (ended) { broadcastState(); return; }
+
+            const seat = gameState.playerOrder.indexOf(playerId);
+            gameState.turnIndex = (seat + 1) % gameState.playerOrder.length;
+            gameState.status = 'PLAYING';
+            broadcastState();
+        }
+
+        function processAcknowledgeReveal() {
+            if (gameState.status !== 'REVEAL_CHALLENGE') return;
+            const info = gameState.revealInfo;
+            gameState.revealInfo = null;
+
+            if (info && info.isLastCardSuccess) {
+                const ended = drawCardsForPlayer(info.loserId, 2);
+                if (ended) { broadcastState(); return; }
+                handleTrophyAward(info.winnerId);
+                return;
+            }
+
+            gameState.status = 'PLAYING';
+            broadcastState();
+        }
+
+        function triggerGameOver(reason, instantWinnerId = null) {
+            gameState.status = 'GAMEOVER';
+            gameState.gameOverReason = reason;
+
+            const rankings = gameState.playerOrder.map(id => {
+                const p = gameState.players[id];
+                const trophyPts = p.trophies * 10;
+                let wonSweet = 0, wonRegular = 0;
+                p.wonCards.forEach(c => { if (c.kind === 'SWEET') wonSweet++; else wonRegular++; });
+                let handSweet = 0, handRegular = 0;
+                p.hand.forEach(c => { if (c.kind === 'SWEET') handSweet++; else handRegular++; });
+
+                const totalScore = trophyPts + (wonSweet * 5) + wonRegular - (handSweet * 5) - handRegular;
+                return {
+                    id: p.id, name: p.name, avatar: p.avatar,
+                    trophies: p.trophies, wonCount: p.wonCards.length,
+                    handCount: p.hand.length, totalScore,
+                    isInstantWinner: p.id === instantWinnerId
+                };
+            });
+
+            rankings.sort((a, b) => {
+                if (a.isInstantWinner) return -1;
+                if (b.isInstantWinner) return 1;
+                if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+                return b.trophies - a.trophies;
+            });
+
+            gameState.finalRankings = rankings;
+            broadcastState();
+        }
+
+        function processReturnLobby() {
+            gameState.status = 'LOBBY';
+            broadcastState();
+        }
+
+        // --- AUTO-SORT HAND FUNCTIONS ---
+        window.sortHandByNumber = function() {
+            playSound('tap');
+            const me = gameState.players[myId];
+            if (!me) return;
+            me.hand.sort((a, b) => {
+                const numA = (a.number !== undefined && a.number !== null) ? a.number : 50;
+                const numB = (b.number !== undefined && b.number !== null) ? b.number : 50;
+                if (numA !== numB) return numA - numB;
+                const spA = SPICE_META[a.spice]?.order || 9;
+                const spB = SPICE_META[b.spice]?.order || 9;
+                return spA - spB;
+            });
+            localUI.selectedCardIndex = null;
+            renderAll();
+        };
+
+        window.sortHandBySpice = function() {
+            playSound('tap');
+            const me = gameState.players[myId];
+            if (!me) return;
+            me.hand.sort((a, b) => {
+                const spA = SPICE_META[a.spice]?.order || 9;
+                const spB = SPICE_META[b.spice]?.order || 9;
+                if (spA !== spB) return spA - spB;
+                const numA = (a.number !== undefined && a.number !== null) ? a.number : 50;
+                const numB = (b.number !== undefined && b.number !== null) ? b.number : 50;
+                return numA - numB;
+            });
+            localUI.selectedCardIndex = null;
+            renderAll();
+        };
+
+        // --- MANUAL HAND REORDERING ---
+        window.moveCardLeft = function(idx, event) {
+            event.stopPropagation();
+            const me = gameState.players[myId];
+            if (!me || idx <= 0 || idx >= me.hand.length) return;
+            playSound('tap');
+            const temp = me.hand[idx];
+            me.hand[idx] = me.hand[idx - 1];
+            me.hand[idx - 1] = temp;
+            if (localUI.selectedCardIndex === idx) localUI.selectedCardIndex = idx - 1;
+            else if (localUI.selectedCardIndex === idx - 1) localUI.selectedCardIndex = idx;
+            renderAll();
+        };
+
+        window.moveCardRight = function(idx, event) {
+            event.stopPropagation();
+            const me = gameState.players[myId];
+            if (!me || idx < 0 || idx >= me.hand.length - 1) return;
+            playSound('tap');
+            const temp = me.hand[idx];
+            me.hand[idx] = me.hand[idx + 1];
+            me.hand[idx + 1] = temp;
+            if (localUI.selectedCardIndex === idx) localUI.selectedCardIndex = idx + 1;
+            else if (localUI.selectedCardIndex === idx + 1) localUI.selectedCardIndex = idx;
+            renderAll();
+        };
+
+        window.selectHandCard = function(idx) {
+            playSound('tap');
+            if (localUI.selectedCardIndex === idx) localUI.selectedCardIndex = null;
+            else localUI.selectedCardIndex = idx;
+            renderAll();
+        };
+
+        window.selectDeclareSpice = function(spiceKey) {
+            const { lockedSpice } = getValidDeclarationConstraints();
+            if (lockedSpice && lockedSpice !== spiceKey) return;
+            playSound('tap');
+            localUI.declareSpice = spiceKey;
+            renderAll();
+        };
+
+        window.selectDeclareNumber = function(num) {
+            const { allowedNumbers } = getValidDeclarationConstraints();
+            if (!allowedNumbers.includes(num)) return;
+            playSound('tap');
+            localUI.declareNumber = num;
+            renderAll();
+        };
+
+        window.submitPlayCard = function() {
+            if (localUI.selectedCardIndex === null || localUI.declareNumber === null) return;
+            playSound('card');
+
+            const payload = {
+                type: 'PLAY_CARD',
+                playerId: myId,
+                cardIndex: localUI.selectedCardIndex,
+                declaredSpice: localUI.declareSpice,
+                declaredNumber: localUI.declareNumber
+            };
+
+            localUI.selectedCardIndex = null;
+            localUI.declareNumber = null;
+
+            if (isHost) processPlayCard(myId, payload.cardIndex, payload.declaredSpice, payload.declaredNumber);
+            else hostConn.send(payload);
+        };
+
+        window.playPassDraw = function() {
+            playSound('tap');
+            localUI.selectedCardIndex = null;
+            if (isHost) processPassDraw(myId);
+            else hostConn.send({ type: 'PASS_DRAW', playerId: myId });
+        };
+
+        window.sendChallenge = function(challengeType) {
+            playSound('challenge');
+            if (isHost) processChallenge(myId, challengeType);
+            else hostConn.send({ type: 'CHALLENGE', playerId: myId, challengeType });
+        };
+
+        window.sendPassChallenge = function() {
+            playSound('tap');
+            localUI.hasPassedChallenge = true;
+            renderAll();
+            if (isHost) processPassChallenge(myId);
+            else hostConn.send({ type: 'PASS_CHALLENGE', playerId: myId });
+        };
+
+        window.acknowledgeReveal = function() {
+            playSound('tap');
+            if (isHost) processAcknowledgeReveal();
+            else hostConn.send({ type: 'ACK_REVEAL' });
+        };
+
+        window.returnToLobby = function() {
+            playSound('tap');
+            if (isHost) processReturnLobby();
+            else hostConn.send({ type: 'RETURN_LOBBY' });
+        };
+
+        function renderCardHTML(card, isInteractive = false, isSelected = false, idx = 0, totalCards = 1) {
+            const selClass = isSelected ? 'selected ring-4 ring-amber-400' : '';
+            const clickAttr = isInteractive ? `onclick="selectHandCard(${idx})"` : '';
+
+            // Repositioned reorder buttons outside the main card content to prevent overlapping with numbers
+            const leftBtn = (isInteractive && idx > 0) ? `<button onclick="moveCardLeft(${idx}, event)" class="absolute -left-3 top-1/2 -translate-y-1/2 w-7 h-7 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-black text-xs shadow-md border-2 border-white flex items-center justify-center z-20"><i class="fa-solid fa-caret-left"></i></button>` : '';
+            const rightBtn = (isInteractive && idx < totalCards - 1) ? `<button onclick="moveCardRight(${idx}, event)" class="absolute -right-3 top-1/2 -translate-y-1/2 w-7 h-7 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-black text-xs shadow-md border-2 border-white flex items-center justify-center z-20"><i class="fa-solid fa-caret-right"></i></button>` : '';
+
+            if (card.kind === 'SPICY') {
+                const m = SPICE_META[card.spice];
+                return `
+                    <div class="relative mx-2">
+                        ${leftBtn}${rightBtn}
+                        <div ${clickAttr} class="playing-card shrink-0 w-24 h-34 sm:w-28 sm:h-38 rounded-2xl border-3 ${m.border} ${m.bg} p-2.5 flex flex-col justify-between shadow-md cursor-pointer ${selClass}">
+                            <div class="flex justify-between items-center">
+                                <span class="font-pop font-black text-xl sm:text-2xl ${m.text}">${card.number}</span>
+                                <span class="text-lg">${m.icon}</span>
+                            </div>
+                            <div class="text-center my-auto">
+                                <div class="text-3xl sm:text-4xl drop-shadow-sm">${m.icon}</div>
+                                <div class="text-[10px] font-black ${m.text} mt-0.5">${m.name}</div>
+                            </div>
+                            <div class="text-right font-pop font-black text-sm ${m.text}">${card.number}</div>
+                        </div>
+                    </div>
+                `;
+            } else if (card.kind === 'WILD_NUMBER') {
+                return `
+                    <div class="relative mx-2">
+                        ${leftBtn}${rightBtn}
+                        <div ${clickAttr} class="playing-card shrink-0 w-24 h-34 sm:w-28 sm:h-38 rounded-2xl border-3 border-sky-400 bg-gradient-to-b from-sky-50 to-indigo-100 p-2.5 flex flex-col justify-between shadow-md cursor-pointer ${selClass}">
+                            <div class="flex justify-between items-center">
+                                <span class="font-pop font-black text-xs bg-sky-500 text-white px-1.5 py-0.5 rounded-md">1-10</span>
+                                <span class="text-sm">🔢</span>
+                            </div>
+                            <div class="text-center my-auto">
+                                <div class="text-2xl sm:text-3xl">🔢</div>
+                                <div class="text-[10px] font-black text-sky-900 leading-tight mt-1">数字<br>なんでも</div>
+                            </div>
+                            <div class="text-[9px] text-center font-bold text-sky-700">スパイスは嘘</div>
+                        </div>
+                    </div>
+                `;
+            } else if (card.kind === 'WILD_SPICE') {
+                return `
+                    <div class="relative mx-2">
+                        ${leftBtn}${rightBtn}
+                        <div ${clickAttr} class="playing-card shrink-0 w-24 h-34 sm:w-28 sm:h-38 rounded-2xl border-3 border-amber-400 bg-gradient-to-b from-yellow-50 via-emerald-50 to-red-50 p-2.5 flex flex-col justify-between shadow-md cursor-pointer ${selClass}">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs">🌈</span>
+                                <span class="text-xs font-black text-amber-800">3種OK</span>
+                            </div>
+                            <div class="text-center my-auto">
+                                <div class="text-lg tracking-tighter">🍋🌿🌶️</div>
+                                <div class="text-[10px] font-black text-slate-800 leading-tight mt-1">スパイス<br>なんでも</div>
+                            </div>
+                            <div class="text-[9px] text-center font-bold text-rose-600">数字は嘘</div>
+                        </div>
+                    </div>
+                `;
+            } else if (card.kind === 'SWEET') {
+                return `
+                    <div class="relative mx-2">
+                        ${leftBtn}${rightBtn}
+                        <div ${clickAttr} class="playing-card shrink-0 w-24 h-34 sm:w-28 sm:h-38 rounded-2xl border-3 border-pink-400 bg-gradient-to-br from-pink-100 via-rose-50 to-amber-100 p-2.5 flex flex-col justify-between shadow-md cursor-pointer ${selClass}">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-black bg-pink-500 text-white px-1.5 py-0.5 rounded-md">WILD</span>
+                                <span class="text-sm">🍰</span>
+                            </div>
+                            <div class="text-center my-auto">
+                                <div class="text-3xl sm:text-4xl">🍰</div>
+                                <div class="text-[10px] font-black text-pink-800 leading-tight mt-1">両方<br>なんでも</div>
+                            </div>
+                            <div class="text-[9px] text-center font-bold text-pink-700">完全無敵ワイルド</div>
+                        </div>
+                    </div>
+                `;
+            }
+            return '';
+        }
+
+        function renderAll() {
+            if (!gameState) return;
+            if (gameState.status === 'LOBBY') {
+                showView('viewRoomLobby');
+                renderLobbyView();
+            } else if (gameState.status === 'GAMEOVER') {
+                showView('viewGameOver');
+                renderGameOverView();
+            } else {
+                showView('viewGame');
+                renderGameBoardView();
+            }
+        }
+
+        function renderLobbyView() {
+            const players = Object.values(gameState.players);
+            document.getElementById('playerCount').innerText = players.length;
+
+            const listEl = document.getElementById('playerList');
+            listEl.innerHTML = '';
+            players.forEach((p, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between bg-amber-50/80 border-2 border-amber-200 p-3 rounded-2xl";
+                div.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-9 h-9 rounded-full bg-white border-2 border-amber-300 flex items-center justify-center text-xl shadow-sm">
+                            ${PLAYER_AVATARS[idx % PLAYER_AVATARS.length]}
+                        </span>
+                        <span class="font-black text-sm text-slate-800">${escapeHtml(p.name)}</span>
+                    </div>
+                    ${p.isHost ? '<span class="text-[10px] font-black bg-amber-400 text-slate-900 px-2.5 py-0.5 rounded-full">ホスト</span>' : '<span class="text-[10px] font-bold text-slate-500">準備OK</span>'}
+                `;
+                listEl.appendChild(div);
+            });
+
+            if (isHost) {
+                document.getElementById('startGameBtn').classList.remove('hidden');
+                document.getElementById('waitingForHostMsg').classList.add('hidden');
+            } else {
+                document.getElementById('startGameBtn').classList.add('hidden');
+                document.getElementById('waitingForHostMsg').classList.remove('hidden');
+            }
+        }
+
+        function renderGameBoardView() {
+            const me = gameState.players[myId];
+            if (!me) return;
+
+            const trophyContainer = document.getElementById('trophyIconsContainer');
+            trophyContainer.innerHTML = '';
+            for (let t = 0; t < 3; t++) {
+                trophyContainer.innerHTML += t < gameState.trophiesLeft ? '<span>🏆</span>' : '<span class="opacity-25 grayscale">🏆</span>';
+            }
+            document.getElementById('deckCountText').innerText = gameState.deck.length;
+            document.getElementById('sweetStockText').innerText = gameState.sweetStock;
+
+            const currentActorId = gameState.playerOrder[gameState.turnIndex];
+            const currentActor = gameState.players[currentActorId];
+            const isMyTurn = (gameState.status === 'PLAYING') && (currentActorId === myId);
+
+            const badge = document.getElementById('turnStatusBadge');
+            if (gameState.status === 'CHALLENGE_WINDOW') {
+                badge.innerText = '⚡ チャレンジ受付中！';
+                badge.className = 'px-4 py-1.5 rounded-2xl text-xs md:text-sm font-black border-2 bg-rose-100 text-rose-700 border-rose-400 animate-pulse';
+            } else if (gameState.status === 'REVEAL_CHALLENGE') {
+                badge.innerText = '🔍 カード公開判定中！';
+                badge.className = 'px-4 py-1.5 rounded-2xl text-xs md:text-sm font-black border-2 bg-amber-100 text-amber-800 border-amber-400';
+            } else if (isMyTurn) {
+                badge.innerText = '✨ あなたの手番です！';
+                badge.className = 'px-4 py-1.5 rounded-2xl text-xs md:text-sm font-black border-2 bg-emerald-100 text-emerald-800 border-emerald-400 animate-bounce';
+            } else {
+                badge.innerText = `⏳ ${currentActor ? currentActor.name : '---'} の手番`;
+                badge.className = 'px-4 py-1.5 rounded-2xl text-xs md:text-sm font-bold border-2 bg-slate-100 text-slate-600 border-slate-300';
+            }
+
+            const stripEl = document.getElementById('gamePlayersStrip');
+            stripEl.innerHTML = '';
+            gameState.playerOrder.forEach((pId, idx) => {
+                const p = gameState.players[pId];
+                const active = idx === gameState.turnIndex;
+                const card = document.createElement('div');
+                card.className = `p-2.5 rounded-2xl border-2 transition ${active ? 'bg-amber-100/90 border-amber-500 shadow-sm' : 'bg-white border-slate-200'}`;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-black text-xs text-slate-800 truncate">${p.avatar} ${escapeHtml(p.name)}</span>
+                        ${p.trophies > 0 ? `<span class="text-xs font-black text-amber-600">🏆×${p.trophies}</span>` : ''}
+                    </div>
+                    <div class="flex justify-between items-center mt-1 text-[10px] font-bold text-slate-500">
+                        <span>手札: <strong class="text-rose-600">${p.hand.length}</strong>枚</span>
+                        <span>得点札: <strong class="text-emerald-600">${p.wonCards.length}</strong>枚</span>
+                    </div>
+                `;
+                stripEl.appendChild(card);
+            });
+
+            const stackCount = gameState.fieldCards.length;
+            document.getElementById('fieldStackCountBadge').innerText = `${stackCount}枚積み上がり`;
+
+            const fieldBox = document.getElementById('fieldCardVisual');
+            const ruleBanner = document.getElementById('nextRequiredRuleBanner');
+
+            if (!gameState.lastPlay) {
+                fieldBox.className = "w-40 h-52 sm:w-44 sm:h-56 rounded-3xl border-4 border-dashed border-amber-300 bg-amber-50/60 flex flex-col items-center justify-center p-4 text-center shadow-inner";
+                fieldBox.innerHTML = `
+                    <span class="text-4xl mb-2">🍽️</span>
+                    <span class="text-sm font-black text-amber-900">場にカードなし</span>
+                    <span class="text-[11px] font-bold text-amber-700 mt-1">好きなスパイスで<br>「1・2・3」を出せます</span>
+                `;
+                ruleBanner.innerText = "次の宣言条件：好きなスパイス の 1〜3";
+            } else {
+                const lp = gameState.lastPlay;
+                const m = SPICE_META[lp.declaredSpice];
+                fieldBox.className = `w-40 h-52 sm:w-44 sm:h-56 rounded-3xl border-4 ${m.border} ${m.bg} flex flex-col items-center justify-between p-4 text-center shadow-lg animate-pop`;
+                fieldBox.innerHTML = `
+                    <div class="w-full flex justify-between items-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${m.pill}">${m.name}</span>
+                        <span class="text-[10px] font-black text-slate-600">${escapeHtml(lp.playerName)}</span>
+                    </div>
+                    <div>
+                        <div class="text-5xl my-1">${m.icon}</div>
+                        <div class="font-pop font-black text-4xl ${m.text}">${lp.declaredNumber}</div>
+                    </div>
+                    <div class="text-[10px] font-black text-slate-500 bg-white/80 px-2.5 py-0.5 rounded-full">
+                        裏向きで場に出ています
+                    </div>
+                `;
+
+                if (lp.declaredNumber >= 10) {
+                    ruleBanner.innerText = `次の宣言条件：【${m.name}】のまま「1〜3」へリセット！`;
+                } else {
+                    ruleBanner.innerText = `次の宣言条件：【${m.name}】のまま「${lp.declaredNumber + 1}〜10」`;
+                }
+            }
+
+            const pChallenge = document.getElementById('panelChallengeWindow');
+            const pReveal = document.getElementById('panelRevealResult');
+            const pTurn = document.getElementById('panelTurnAction');
+
+            pChallenge.classList.add('hidden');
+            pReveal.classList.add('hidden');
+            pTurn.classList.add('hidden');
+
+            if (gameState.status === 'CHALLENGE_WINDOW' && gameState.lastPlay) {
+                pChallenge.classList.remove('hidden');
+                const lp = gameState.lastPlay;
+                const m = SPICE_META[lp.declaredSpice];
+
+                document.getElementById('challengeWindowBadge').innerText = lp.isLastCardPlay
+                    ? '🚨 上がり宣言（最後の1枚）！阻止するなら今！'
+                    : '🗣️ 宣言チェックタイム！';
+                document.getElementById('challengeAnnouncementText').innerText =
+                    `${lp.playerName}：「${m.icon} ${m.name}の ${lp.declaredNumber}！」`;
+
+                const btnBox = document.getElementById('challengerButtonsBox');
+                const waitBox = document.getElementById('challengerWaitingBox');
+
+                if (lp.playerId === myId) {
+                    btnBox.classList.add('hidden');
+                    waitBox.classList.remove('hidden');
+                    waitBox.innerText = '他のプレイヤーがチャレンジするか判断しています...';
+                } else if (localUI.hasPassedChallenge) {
+                    btnBox.classList.add('hidden');
+                    waitBox.classList.remove('hidden');
+                    waitBox.innerText = 'あなたは「信じる（OK）」を選択しました。他のプレイヤー待ち...';
+                } else {
+                    btnBox.classList.remove('hidden');
+                    waitBox.classList.add('hidden');
+                    const remainCount = (gameState.playerOrder.length - 1) - gameState.challengePasses.length;
+                    document.getElementById('passChallengeBtnLabel').innerText = `信じる（残り${remainCount}人）`;
+                }
+
+            } else if (gameState.status === 'REVEAL_CHALLENGE' && gameState.revealInfo) {
+                pReveal.classList.remove('hidden');
+                const info = gameState.revealInfo;
+                const banner = document.getElementById('revealResultBanner');
+                const titleEl = document.getElementById('revealResultTitle');
+                const descEl = document.getElementById('revealResultDesc');
+                const cardBox = document.getElementById('revealActualCardBox');
+
+                cardBox.innerHTML = `<div class="animate-flip">${renderCardHTML(info.card, false, false, 0, 1)}</div>`;
+
+                const winnerName = gameState.players[info.winnerId]?.name || '勝者';
+                const loserName = gameState.players[info.loserId]?.name || '敗者';
+
+                if (info.isLie) {
+                    banner.className = "p-4 rounded-2xl border-2 bg-rose-50 border-rose-400 space-y-2";
+                    titleEl.innerText = `💥 チャレンジ成功！見事に嘘を見破った！`;
+                    titleEl.className = "text-lg md:text-xl font-black text-rose-700";
+                    descEl.innerText = `${winnerName} が場のカード ${info.fieldCount}枚を獲得！${loserName} はペナルティで2枚引きます。`;
+                } else {
+                    banner.className = "p-4 rounded-2xl border-2 bg-emerald-50 border-emerald-400 space-y-2";
+                    titleEl.innerText = `🛡️ 宣言通り（本当）だった！チャレンジ失敗！`;
+                    titleEl.className = "text-lg md:text-xl font-black text-emerald-700";
+                    descEl.innerText = info.isLastCardSuccess
+                        ? `${winnerName} が見事上がり達成でトロフィー獲得！${loserName} は2枚引きます。`
+                        : `${winnerName} が場のカード ${info.fieldCount}枚を獲得！${loserName} は2枚引きます。`;
+                }
+
+                if (isHost) {
+                    document.getElementById('btnContinueAfterReveal').classList.remove('hidden');
+                    document.getElementById('waitHostRevealText').classList.add('hidden');
+                } else {
+                    document.getElementById('btnContinueAfterReveal').classList.add('hidden');
+                    document.getElementById('waitHostRevealText').classList.remove('hidden');
+                }
+
+            } else {
+                pTurn.classList.remove('hidden');
+                const { lockedSpice, allowedNumbers } = getValidDeclarationConstraints();
+
+                if (lockedSpice) {
+                    localUI.declareSpice = lockedSpice;
+                    document.getElementById('spiceLockHint').innerText = `※場の「${SPICE_META[lockedSpice].name}」に固定`;
+                } else {
+                    document.getElementById('spiceLockHint').innerText = '好きなスパイスを選択';
+                }
+
+                ['LEMON', 'PEPPER', 'CHILI'].forEach(sp => {
+                    const b = document.getElementById(`btnSpice${sp}`);
+                    const isSelected = localUI.declareSpice === sp;
+                    const isLockedOut = lockedSpice && lockedSpice !== sp;
+                    b.disabled = !isMyTurn || isLockedOut;
+                    b.className = `py-2.5 rounded-xl font-black text-xs md:text-sm border-2 transition flex items-center justify-center gap-1.5 ${
+                        isSelected
+                            ? `${SPICE_META[sp].pill} border-slate-900 ring-2 ring-amber-400 scale-105`
+                            : isLockedOut
+                                ? 'bg-slate-100 border-slate-200 text-slate-400 opacity-40'
+                                : `${SPICE_META[sp].bg} ${SPICE_META[sp].border} ${SPICE_META[sp].text} opacity-80 hover:opacity-100`
+                    }`;
+                });
+
+                if (localUI.declareNumber && !allowedNumbers.includes(localUI.declareNumber)) {
+                    localUI.declareNumber = null;
+                }
+                document.getElementById('numberRangeHint').innerText = `${allowedNumbers[0]}〜${allowedNumbers[allowedNumbers.length - 1]} を選択可能`;
+
+                const numGrid = document.getElementById('declareNumbersGrid');
+                numGrid.innerHTML = '';
+                for (let n = 1; n <= 10; n++) {
+                    const allowed = allowedNumbers.includes(n);
+                    const selected = localUI.declareNumber === n;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.disabled = !isMyTurn || !allowed;
+                    btn.onclick = () => selectDeclareNumber(n);
+                    btn.innerText = n;
+                    btn.className = `py-2 rounded-xl font-pop font-black text-sm border-2 transition ${
+                        selected
+                            ? 'bg-rose-600 text-white border-slate-900 ring-2 ring-amber-400 scale-105'
+                            : allowed && isMyTurn
+                                ? 'bg-white hover:bg-rose-100 text-slate-800 border-rose-300'
+                                : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
+                    }`;
+                    numGrid.appendChild(btn);
+                }
+
+                document.getElementById('btnPassDraw').disabled = !isMyTurn;
+                const submitBtn = document.getElementById('btnPlaySelectedCard');
+                const readyToSubmit = isMyTurn && (localUI.selectedCardIndex !== null) && (localUI.declareNumber !== null);
+                submitBtn.disabled = !readyToSubmit;
+
+                if (!isMyTurn) {
+                    submitBtn.innerText = `${currentActor ? currentActor.name : '相手'} の手番を待っています...`;
+                } else if (readyToSubmit) {
+                    const spName = SPICE_META[localUI.declareSpice].name;
+                    submitBtn.innerText = `「${spName}の ${localUI.declareNumber}！」と宣言して出す 🎴`;
+                } else {
+                    submitBtn.innerText = '手札1枚と宣言する数字を選んでください';
+                }
+            }
+
+            document.getElementById('myHandCount').innerText = me.hand.length;
+            document.getElementById('myTrophyBadge').innerText = `🏆 ${me.trophies}枚 / 獲得札 ${me.wonCards.length}枚`;
+
+            const handEl = document.getElementById('myHandContainer');
+            handEl.innerHTML = '';
+            me.hand.forEach((card, idx) => {
+                const isSelected = localUI.selectedCardIndex === idx;
+                handEl.innerHTML += renderCardHTML(card, isMyTurn, isSelected, idx, me.hand.length);
+            });
+
+            const logEl = document.getElementById('gameLogList');
+            logEl.innerHTML = '';
+            (gameState.logs || []).forEach((line, idx) => {
+                const row = document.createElement('div');
+                row.className = idx === 0 ? 'font-black text-rose-700' : 'text-slate-600';
+                row.innerText = `• ${line}`;
+                logEl.appendChild(row);
+            });
+        }
+
+        function renderGameOverView() {
+            document.getElementById('gameOverReasonBadge').innerText = gameState.gameOverReason || 'ゲーム終了！';
+            const rankings = gameState.finalRankings || [];
+            const top = rankings[0];
+
+            document.getElementById('finalWinnerTitle').innerText = top ? `優勝: ${top.name}！` : '勝者決定！';
+            document.getElementById('finalWinnerSubtitle').innerText = top?.isInstantWinner ? 'トロフィー2枚獲得による完全勝利達成！' : '最終スコア計算の結果発表';
+
+            const listEl = document.getElementById('finalRankingList');
+            listEl.innerHTML = '';
+            rankings.forEach((r, idx) => {
+                const row = document.createElement('div');
+                row.className = `p-4 rounded-2xl border-2 flex items-center justify-between ${idx === 0 ? 'bg-amber-50 border-amber-400 shadow-md' : 'bg-white border-slate-200'}`;
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="font-pop font-black text-xl ${idx === 0 ? 'text-amber-600' : 'text-slate-400'}">#${idx + 1}</span>
+                        <span class="text-2xl">${r.avatar}</span>
+                        <div>
+                            <div class="font-black text-base text-slate-800">${escapeHtml(r.name)}</div>
+                            <div class="text-xs font-bold text-slate-500">
+                                🏆×${r.trophies} / 獲得札 ${r.wonCount}枚 / 手札残り ${r.handCount}枚
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-pop font-black text-2xl ${idx === 0 ? 'text-rose-600' : 'text-slate-700'}">
+                            ${r.isInstantWinner ? 'WIN!' : `${r.totalScore}点`}
+                        </span>
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+            }
+
+            if (isHost) {
+                document.getElementById('gameOverHostControls').classList.remove('hidden');
+                document.getElementById('gameOverClientMsg').classList.add('hidden');
+            } else {
+                document.getElementById('gameOverHostControls').classList.add('hidden');
+                document.getElementById('gameOverClientMsg').classList.remove('hidden');
+            }
+        }
+
+        function addLog(text) {
+            if (!gameState.logs) gameState.logs = [];
+            gameState.logs.unshift(text);
+            if (gameState.logs.length > 35) gameState.logs.pop();
+        }
+
+        window.copyRoomCode = function() {
+            if (!roomCode) return;
+            navigator.clipboard.writeText(roomCode);
+            showToast('📋', `あいことば「${roomCode}」をコピーしました！`);
+        };
+
+        window.toggleSound = function() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIcon').className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark text-rose-500';
+        };
+
+        window.confirmReload = function() {
+            if (gameState.status === 'LOBBY') location.reload();
+            else if (confirm('タイトル画面に戻りますか？')) location.reload();
+        };
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btnCreateRoom').addEventListener('click', handleCreateRoom);
+            document.getElementById('btnJoinRoom').addEventListener('click', handleJoinRoom);
+        });
+    </script>
+</body>
+</html>
