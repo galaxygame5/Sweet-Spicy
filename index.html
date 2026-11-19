@@ -385,7 +385,6 @@
                             🏆 0枚 / 獲得札 0枚
                         </span>
                     </div>
-                    <!-- Auto-Sort Buttons -->
                     <div class="flex items-center gap-1.5">
                         <button onclick="sortHandByNumber()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1 transition shadow-sm">
                             <i class="fa-solid fa-arrow-down-1-9"></i> 数字順ソート
@@ -526,7 +525,7 @@
     </footer>
 
     <script>
-        const APP_PREFIX = "sweet-spicy-online-v3-";
+        const APP_PREFIX = "sweet-spicy-online-v4-";
 
         const SPICE_META = {
             LEMON:  { name: 'レモン',     icon: '🍋', bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-900', pill: 'bg-yellow-400 text-slate-950', order: 1 },
@@ -736,8 +735,18 @@
             showView('viewRoomLobby');
         }
 
+        function syncLocalChallengePassFlag() {
+            if (gameState.status !== 'CHALLENGE_WINDOW' || !gameState.lastPlay) {
+                localUI.hasPassedChallenge = false;
+                return;
+            }
+            const passes = Array.isArray(gameState.challengePasses) ? gameState.challengePasses : [];
+            localUI.hasPassedChallenge = passes.includes(myId);
+        }
+
         function broadcastState() {
             if (!isHost) return;
+            syncLocalChallengePassFlag();
             Object.values(connections).forEach(conn => {
                 if (conn.open) conn.send({ type: 'STATE', gameState });
             });
@@ -776,11 +785,11 @@
                 gameState = msg.gameState;
                 if (prevStatus !== gameState.status) {
                     localUI.selectedCardIndex = null;
-                    localUI.hasPassedChallenge = false;
                     if (gameState.status === 'CHALLENGE_WINDOW') playSound('card');
                     else if (gameState.status === 'REVEAL_CHALLENGE') playSound('challenge');
                     else if (gameState.status === 'GAMEOVER') playSound('win');
                 }
+                syncLocalChallengePassFlag();
                 renderAll();
             } else if (msg.type === 'ERROR') {
                 alert(msg.text);
@@ -831,6 +840,7 @@
             gameState.challengePasses = [];
             gameState.revealInfo = null;
             gameState.logs = [];
+            localUI.hasPassedChallenge = false;
 
             const deck = buildSpicyDeck(pIds.length);
             pIds.forEach((id, idx) => {
@@ -891,6 +901,7 @@
             if (gameState.status !== 'PLAYING') return;
             if (gameState.playerOrder[gameState.turnIndex] !== playerId) return;
 
+            gameState.challengePasses = [];
             const p = gameState.players[playerId];
             addLog(`🃏 ${p.name} はパスして山札から1枚引きました。`);
 
@@ -924,6 +935,7 @@
                 declaredNumber,
                 isLastCardPlay: isLastCard
             };
+            // Always reset challengePasses whenever a new card is played
             gameState.challengePasses = [];
             gameState.status = 'CHALLENGE_WINDOW';
 
@@ -945,6 +957,7 @@
             const nonActiveCount = gameState.playerOrder.length - 1;
             if (gameState.challengePasses.length >= nonActiveCount) {
                 const actorId = gameState.lastPlay.playerId;
+                gameState.challengePasses = [];
 
                 if (gameState.lastPlay.isLastCardPlay) {
                     handleTrophyAward(actorId);
@@ -954,7 +967,6 @@
                 const actorSeat = gameState.playerOrder.indexOf(actorId);
                 gameState.turnIndex = (actorSeat + 1) % gameState.playerOrder.length;
                 gameState.status = 'PLAYING';
-                gameState.challengePasses = [];
                 broadcastState();
             } else {
                 broadcastState();
@@ -977,6 +989,9 @@
         function processChallenge(challengerId, challengeType) {
             if (gameState.status !== 'CHALLENGE_WINDOW') return;
             if (!gameState.lastPlay || gameState.lastPlay.playerId === challengerId) return;
+
+            // Clear pending challenge passes immediately upon challenge trigger
+            gameState.challengePasses = [];
 
             const play = gameState.lastPlay;
             const challenger = gameState.players[challengerId];
@@ -1031,6 +1046,7 @@
             const p = gameState.players[playerId];
             gameState.fieldCards = [];
             gameState.lastPlay = null;
+            gameState.challengePasses = [];
             gameState.trophiesLeft = Math.max(0, gameState.trophiesLeft - 1);
             p.trophies += 1;
 
@@ -1058,6 +1074,7 @@
             if (gameState.status !== 'REVEAL_CHALLENGE') return;
             const info = gameState.revealInfo;
             gameState.revealInfo = null;
+            gameState.challengePasses = [];
 
             if (info && info.isLastCardSuccess) {
                 const ended = drawCardsForPlayer(info.loserId, 2);
@@ -1073,6 +1090,7 @@
         function triggerGameOver(reason, instantWinnerId = null) {
             gameState.status = 'GAMEOVER';
             gameState.gameOverReason = reason;
+            gameState.challengePasses = [];
 
             const rankings = gameState.playerOrder.map(id => {
                 const p = gameState.players[id];
@@ -1104,6 +1122,7 @@
 
         function processReturnLobby() {
             gameState.status = 'LOBBY';
+            gameState.challengePasses = [];
             broadcastState();
         }
 
@@ -1204,6 +1223,7 @@
 
             localUI.selectedCardIndex = null;
             localUI.declareNumber = null;
+            localUI.hasPassedChallenge = false;
 
             if (isHost) processPlayCard(myId, payload.cardIndex, payload.declaredSpice, payload.declaredNumber);
             else hostConn.send(payload);
@@ -1212,12 +1232,14 @@
         window.playPassDraw = function() {
             playSound('tap');
             localUI.selectedCardIndex = null;
+            localUI.hasPassedChallenge = false;
             if (isHost) processPassDraw(myId);
             else hostConn.send({ type: 'PASS_DRAW', playerId: myId });
         };
 
         window.sendChallenge = function(challengeType) {
             playSound('challenge');
+            localUI.hasPassedChallenge = false;
             if (isHost) processChallenge(myId, challengeType);
             else hostConn.send({ type: 'CHALLENGE', playerId: myId, challengeType });
         };
@@ -1232,12 +1254,14 @@
 
         window.acknowledgeReveal = function() {
             playSound('tap');
+            localUI.hasPassedChallenge = false;
             if (isHost) processAcknowledgeReveal();
             else hostConn.send({ type: 'ACK_REVEAL' });
         };
 
         window.returnToLobby = function() {
             playSound('tap');
+            localUI.hasPassedChallenge = false;
             if (isHost) processReturnLobby();
             else hostConn.send({ type: 'RETURN_LOBBY' });
         };
@@ -1246,7 +1270,6 @@
             const selClass = isSelected ? 'selected ring-4 ring-amber-400' : '';
             const clickAttr = isInteractive ? `onclick="selectHandCard(${idx})"` : '';
 
-            // Repositioned reorder buttons outside the main card content to prevent overlapping with numbers
             const leftBtn = (isInteractive && idx > 0) ? `<button onclick="moveCardLeft(${idx}, event)" class="absolute -left-3 top-1/2 -translate-y-1/2 w-7 h-7 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-black text-xs shadow-md border-2 border-white flex items-center justify-center z-20"><i class="fa-solid fa-caret-left"></i></button>` : '';
             const rightBtn = (isInteractive && idx < totalCards - 1) ? `<button onclick="moveCardRight(${idx}, event)" class="absolute -right-3 top-1/2 -translate-y-1/2 w-7 h-7 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-black text-xs shadow-md border-2 border-white flex items-center justify-center z-20"><i class="fa-solid fa-caret-right"></i></button>` : '';
 
@@ -1325,6 +1348,7 @@
 
         function renderAll() {
             if (!gameState) return;
+            syncLocalChallengePassFlag();
             if (gameState.status === 'LOBBY') {
                 showView('viewRoomLobby');
                 renderLobbyView();
@@ -1490,7 +1514,8 @@
                 } else {
                     btnBox.classList.remove('hidden');
                     waitBox.classList.add('hidden');
-                    const remainCount = (gameState.playerOrder.length - 1) - gameState.challengePasses.length;
+                    const passes = Array.isArray(gameState.challengePasses) ? gameState.challengePasses : [];
+                    const remainCount = Math.max(1, (gameState.playerOrder.length - 1) - passes.length);
                     document.getElementById('passChallengeBtnLabel').innerText = `信じる（残り${remainCount}人）`;
                 }
 
